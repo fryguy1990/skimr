@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Skimr — Speed Reading Demo</title>
+
+  <!-- Google Font (allowed external dependency) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Your CSS file -->
+<link rel="stylesheet" href="/src/style.css" />
+<script type="module" src="/src/main.js"></script>
+
+</head>
+
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#/">
+        <div class="brand-badge" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M4 6h16M4 12h10M4 18h16" stroke="white" stroke-opacity="0.9" stroke-width="2" stroke-linecap="round"/>
+            <path d="M18 10l2 2-2 2" stroke="#ff4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span>Skimr</span>
+      </a>
+
+      <div class="nav-actions">
+        <span class="chip">Demo prototype</span>
+        <span class="chip">Shortcut: <span class="kbd">Space</span></span>
+        <a class="btn btn-ghost" href="#/app" style="padding:10px 12px;border-radius:12px;">
+          Try it now
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- LANDING PAGE -->
+  <main id="page-landing" class="page">
+    <section class="hero">
+      <div class="hero-card">
+        <h1 class="headline">Read 3x faster. Starting now.</h1>
+        <p class="subheadline">Speed reading that actually works. One word at a time, perfectly paced.</p>
+
+        <div class="cta-row">
+          <button class="btn btn-primary" id="landingTryBtn">
+            Try it now <span aria-hidden="true">→</span>
+          </button>
+          <div class="mini-note">
+            <span class="kbd">Space</span> to play/pause once you’re in the app
+          </div>
+        </div>
+
+        <div class="feature-grid" aria-label="Features">
+          <div class="feature">
+            <h3>Adjustable speed</h3>
+            <p>Dial your pace from 100–800 WPM, with beginner-to-expert presets.</p>
+          </div>
+          <div class="feature">
+            <h3>Works with any text</h3>
+            <p>Choose a sample or paste your own. No setup, no sign-up.</p>
+          </div>
+          <div class="feature">
+            <h3>Track your progress</h3>
+            <p>See words read, time remaining, and a clean progress bar as you go.</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="hero-side" aria-label="Preview">
+        <div class="mock">
+          <div class="mock-top">
+            <span>Preview</span>
+            <span class="chip" style="padding:6px 10px;">ORP highlight</span>
+          </div>
+          <div class="mock-word" aria-hidden="true">
+            <span><span>pro</span><span class="orp">d</span><span>uctivity</span></span>
+          </div>
+          <div class="mock-bar" aria-hidden="true"><div></div></div>
+          <p class="footer-note" style="margin:14px 0 0;">
+            The red letter marks your “optimal recognition point” — where your eyes naturally lock in.
+          </p>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <!-- APP PAGE -->
+  <main id="page-app" class="page hidden">
+    <div class="app-layout">
+      <!-- Main reader -->
+      <section class="panel">
+        <div class="word-stage">
+          <div class="word-display" role="region" aria-label="Speed reading display">
+            <div id="wordEl" class="word" aria-live="polite">Ready</div>
+            <div class="stage-hint">
+              <span>Play/Pause: <span class="kbd">Space</span></span>
+              <span id="statusEl">Paused</span>
+            </div>
+          </div>
+
+          <div class="progress-row" aria-label="Progress">
+            <div class="progress" aria-hidden="true"><div id="progressFill"></div></div>
+            <div class="progress-meta" id="progressMeta">0 / 0</div>
+          </div>
+
+          <div class="controls" aria-label="Controls">
+            <div class="controls-left">
+              <button class="icon-btn" id="backBtn" title="Back 10 words (←)">
+                <span class="sr-only">Back 10</span>
+                ⟲
+              </button>
+
+              <button class="icon-btn primary" id="playBtn" title="Play/Pause (Space)">
+                <span class="sr-only">Play/Pause</span>
+                ▶︎
+              </button>
+
+              <button class="icon-btn" id="fwdBtn" title="Forward 10 words (→)">
+                <span class="sr-only">Forward 10</span>
+                ⟳
+              </button>
+
+              <button class="icon-btn" id="restartBtn" title="Restart (R)">
+                <span class="sr-only">Restart</span>
+                ↺
+              </button>
+            </div>
+
+            <div class="controls-right">
+              <div class="wpm-box" aria-label="Speed control">
+                <div class="wpm-top">
+                  <div class="wpm-label">Words per minute (WPM)</div>
+                  <div class="wpm-value"><span id="wpmVal">300</span></div>
+                </div>
+                <input id="wpmSlider" type="range" min="100" max="800" step="10" value="300" />
+                <div class="presets" id="presetRow" aria-label="WPM presets">
+                  <div class="pill" data-wpm="200">200 · Beginner</div>
+                  <div class="pill active" data-wpm="300">300 · Normal</div>
+                  <div class="pill" data-wpm="450">450 · Fast</div>
+                  <div class="pill" data-wpm="600">600 · Expert</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="footer-note">
+            Smart timing is on: longer pauses for punctuation, long words, and paragraph breaks.
+          </p>
+        </div>
+      </section>
+
+      <!-- Sidebar -->
+      <aside class="panel sidebar">
+        <h2>Text</h2>
+
+        <div class="field">
+          <label for="sampleSelect">Choose a sample</label>
+          <select id="sampleSelect">
+            <option value="psychology">“The Psychology of Money” excerpt (500 words)</option>
+            <option value="tech">Tech news article (400 words)</option>
+            <option value="classic">Classic literature passage (300 words)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="textArea">Or paste your own text</label>
+          <textarea id="textArea" spellcheck="false"></textarea>
+        </div>
+
+        <div class="row" style="margin-bottom:6px;">
+          <button class="btn" id="useTextBtn">Load text</button>
+          <button class="btn btn-ghost" id="resetSampleBtn">Reset to sample</button>
+        </div>
+
+        <h2 style="margin-top:18px;">Stats</h2>
+        <div class="stats" aria-label="Stats panel">
+          <div class="stat">
+            <div class="k">Current WPM</div>
+            <div class="v" id="statWpm">300</div>
+          </div>
+          <div class="stat">
+            <div class="k">Words read</div>
+            <div class="v" id="statWords">0 / 0</div>
+          </div>
+          <div class="stat">
+            <div class="k">Time remaining</div>
+            <div class="v small" id="statTime">0:00</div>
+          </div>
+          <div class="stat">
+            <div class="k">Books finished this month</div>
+            <div class="v">3</div>
+          </div>
+          <div class="stat">
+            <div class="k">Reading streak</div>
+            <div class="v">7 days</div>
+          </div>
+          <div class="stat">
+            <div class="k">Mode</div>
+            <div class="v small" id="statMode">Smart timing</div>
+          </div>
+        </div>
+
+        <p class="footer-note">
+          Tip: Use <span class="kbd">←</span>/<span class="kbd">→</span> to skip 10 words, <span class="kbd">R</span> to restart.
+        </p>
+      </aside>
+    </div>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- Your JS file (IMPORTANT: keep this at the end of body) -->
+  <script type="module" src="/main.js"></script>
+</body>
+</html>

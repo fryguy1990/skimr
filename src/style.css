@@ -1,0 +1,773 @@
+
+    :root{
+      --bg:#1a1a1a;
+      --panel:#222;
+      --panel2:#262626;
+      --text:#ffffff;
+      --muted:#b9b9b9;
+      --muted2:#8d8d8d;
+      --accent:#ff4444;
+      --ring: rgba(255,255,255,.10);
+      --shadow: rgba(0,0,0,.35);
+      --ok: #2ee59d;
+      --warn: #fbbf24;
+      --radius: 18px;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1000px 600px at 20% 0%, rgba(255,68,68,.10), transparent 55%),
+                  radial-gradient(900px 700px at 90% 20%, rgba(255,255,255,.06), transparent 50%),
+                  var(--bg);
+      color:var(--text);
+      overflow-x:hidden;
+    }
+
+    a{ color:inherit; text-decoration:none; }
+    button, input, textarea, select { font-family:inherit; }
+
+    .hidden{ display:none !important; }
+
+    /* Top nav (subtle) */
+    .topbar{
+      position:sticky;
+      top:0;
+      z-index:50;
+      backdrop-filter: blur(10px);
+      background: rgba(26,26,26,.65);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .topbar-inner{
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 14px 18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:700;
+      letter-spacing:-.02em;
+    }
+    .brand-badge{
+      width:34px;height:34px;
+      border-radius: 12px;
+      display:grid; place-items:center;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(255,68,68,.35), rgba(255,68,68,.12) 45%, rgba(255,255,255,.06) 70%),
+        rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    .brand-badge svg{ opacity:.95; }
+    .nav-actions{
+      display:flex; align-items:center; gap:10px;
+    }
+    .chip{
+      font-size:12px;
+      padding:8px 10px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.06);
+      color: var(--muted);
+    }
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      padding:3px 7px;
+      border-radius: 8px;
+      font-size:12px;
+      color: var(--text);
+      opacity:.9;
+    }
+
+    /* Layout containers */
+    .page{
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 44px 18px 72px;
+    }
+
+    /* Landing */
+    .hero{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap:24px;
+      align-items:center;
+      margin-top: 16px;
+    }
+    @media (max-width: 920px){
+      .hero{ grid-template-columns:1fr; }
+    }
+
+    .hero-card{
+      border-radius: var(--radius);
+      border: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.04));
+      box-shadow: 0 24px 80px rgba(0,0,0,.35);
+      padding: 28px;
+      position:relative;
+      overflow:hidden;
+    }
+    .hero-card:before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background:
+        radial-gradient(600px 350px at 20% 0%, rgba(255,68,68,.18), transparent 60%),
+        radial-gradient(600px 380px at 80% 30%, rgba(255,255,255,.10), transparent 60%);
+      opacity:.9;
+      pointer-events:none;
+      filter: blur(0px);
+    }
+    .hero-card > *{ position:relative; }
+
+    .headline{
+      font-size: clamp(36px, 4.2vw, 54px);
+      line-height: 1.02;
+      letter-spacing: -0.04em;
+      margin: 0 0 10px;
+      font-weight: 800;
+    }
+    .subheadline{
+      margin:0 0 20px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.5;
+      max-width: 55ch;
+    }
+
+    .cta-row{
+      display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+      margin-top: 8px;
+    }
+    .btn{
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding: 12px 16px;
+      border-radius: 14px;
+      cursor:pointer;
+      transition: transform .15s ease, background .15s ease, border-color .15s ease;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      font-weight: 600;
+    }
+    .btn:hover{ transform: translateY(-1px); border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.08); }
+    .btn:active{ transform: translateY(0px); }
+
+    .btn-primary{
+      background: linear-gradient(135deg, rgba(255,68,68,.95), rgba(255,68,68,.65));
+      border-color: rgba(255,68,68,.55);
+      box-shadow: 0 14px 50px rgba(255,68,68,.18);
+    }
+    .btn-primary:hover{
+      background: linear-gradient(135deg, rgba(255,68,68,1), rgba(255,68,68,.75));
+      border-color: rgba(255,68,68,.75);
+    }
+    .btn-ghost{
+      background: rgba(255,255,255,.03);
+    }
+
+    .mini-note{
+      color: var(--muted2);
+      font-size: 13px;
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+
+    .feature-grid{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:14px;
+      margin-top: 18px;
+    }
+    @media (max-width: 920px){
+      .feature-grid{ grid-template-columns:1fr; }
+    }
+    .feature{
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      padding: 16px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.25);
+    }
+    .feature h3{
+      margin: 0 0 6px;
+      font-size: 14px;
+      letter-spacing: -.01em;
+    }
+    .feature p{
+      margin:0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .hero-side{
+      border-radius: var(--radius);
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      box-shadow: 0 24px 80px rgba(0,0,0,.28);
+      padding: 22px;
+    }
+    .mock{
+      border-radius: 16px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.25);
+      padding: 18px;
+    }
+    .mock-top{
+      display:flex; justify-content:space-between; align-items:center;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .mock-word{
+      height: 120px;
+      border-radius: 16px;
+      border:1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+      display:grid;
+      place-items:center;
+      overflow:hidden;
+      position:relative;
+    }
+    .mock-word span{
+      font-size: 52px;
+      letter-spacing: -0.03em;
+      opacity: .95;
+      animation: demoFade 1.5s ease-in-out infinite;
+    }
+    @keyframes demoFade{
+      0%,100%{ opacity:.6; transform: translateY(2px); }
+      50%{ opacity:1; transform: translateY(0px); }
+    }
+    .orp{ color: var(--accent); }
+
+    .mock-bar{
+      height: 10px;
+      margin-top: 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      overflow:hidden;
+    }
+    .mock-bar > div{
+      width: 38%;
+      height:100%;
+      background: linear-gradient(90deg, rgba(255,68,68,.95), rgba(255,68,68,.45));
+      border-radius: 999px;
+    }
+
+    /* App */
+    .app-layout{
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:16px;
+      align-items:start;
+    }
+    @media (max-width: 980px){
+      .app-layout{ grid-template-columns: 1fr; }
+    }
+
+    .panel{
+      border-radius: var(--radius);
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      box-shadow: 0 24px 80px rgba(0,0,0,.28);
+      padding: 18px;
+    }
+
+    .word-stage{
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.26);
+      padding: 20px;
+    }
+    .word-display{
+      height: clamp(160px, 24vh, 230px);
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+      display:grid;
+      place-items:center;
+      position:relative;
+      overflow:hidden;
+    }
+    .word{
+      font-size: clamp(48px, 5.2vw, 64px);
+      font-weight: 650;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity .12s ease, transform .12s ease;
+      padding: 0 18px;
+      text-align:center;
+      word-break: break-word;
+    }
+    .word.show{
+      opacity: 1;
+      transform: translateY(0px);
+    }
+    .stage-hint{
+      position:absolute;
+      bottom: 14px;
+      left: 16px;
+      right: 16px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      font-size: 12px;
+      color: var(--muted2);
+      opacity:.95;
+      pointer-events:none;
+    }
+
+    .progress-row{
+      margin-top: 16px;
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+    .progress{
+      height: 10px;
+      flex:1;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      overflow:hidden;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .progress > div{
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, rgba(255,68,68,.95), rgba(255,68,68,.45));
+      border-radius: 999px;
+      transition: width .12s linear;
+    }
+    .progress-meta{
+      font-size: 12px;
+      color: var(--muted);
+      min-width: 112px;
+      text-align:right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .controls{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top: 16px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .controls-left, .controls-right{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+    }
+
+    .icon-btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+      cursor:pointer;
+      transition: transform .12s ease, background .12s ease, border-color .12s ease;
+    }
+    .icon-btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.18); }
+    .icon-btn:active{ transform: translateY(0px); }
+    .icon-btn.primary{
+      background: linear-gradient(135deg, rgba(255,68,68,.95), rgba(255,68,68,.65));
+      border-color: rgba(255,68,68,.55);
+    }
+    .icon-btn.primary:hover{
+      background: linear-gradient(135deg, rgba(255,68,68,1), rgba(255,68,68,.75));
+      border-color: rgba(255,68,68,.75);
+    }
+
+    .wpm-box{
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      padding: 10px 12px;
+      min-width: 240px;
+    }
+    .wpm-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:baseline;
+      gap:10px;
+    }
+    .wpm-label{
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .wpm-value{
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -.02em;
+      font-variant-numeric: tabular-nums;
+    }
+    input[type="range"]{
+      width: 100%;
+      margin-top: 10px;
+      accent-color: var(--accent);
+    }
+
+    .presets{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top: 10px;
+    }
+    .pill{
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      padding: 7px 10px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor:pointer;
+      transition: background .12s ease, border-color .12s ease, transform .12s ease;
+      user-select:none;
+    }
+    .pill:hover{ background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.18); transform: translateY(-1px); }
+    .pill.active{
+      background: rgba(255,68,68,.15);
+      border-color: rgba(255,68,68,.45);
+      color: var(--text);
+    }
+
+    .sidebar h2{
+      margin: 0 0 10px;
+      font-size: 14px;
+      color: var(--muted);
+      letter-spacing: .02em;
+      text-transform: uppercase;
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      margin-bottom: 12px;
+    }
+    label{
+      font-size: 12px;
+      color: var(--muted);
+    }
+    select, textarea{
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.20);
+      color: var(--text);
+      padding: 10px 12px;
+      outline:none;
+    }
+    textarea{
+      min-height: 140px;
+      resize: vertical;
+      line-height: 1.35;
+      color: rgba(255,255,255,.92);
+    }
+
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+
+    .stats{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      margin-top: 8px;
+    }
+    @media (max-width: 420px){
+      .stats{ grid-template-columns: 1fr; }
+    }
+    .stat{
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      padding: 12px;
+    }
+    .stat .k{
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .stat .v{
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -.02em;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat .v.small{
+      font-size: 14px;
+      font-weight: 650;
+    }
+
+    .footer-note{
+      margin-top: 14px;
+      color: var(--muted2);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .toast{
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.45);
+      color: rgba(255,255,255,.90);
+      font-size: 12px;
+      box-shadow: 0 12px 50px rgba(0,0,0,.35);
+      opacity: 0;
+      pointer-events:none;
+      transition: opacity .18s ease, transform .18s ease;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      z-index: 999;
+    }
+    .toast.show{
+      opacity: 1;
+      transform: translateX(-50%) translateY(-4px);
+    }
+
+    .sr-only{
+      position:absolute;
+      width:1px;
+      height:1px;
+      padding:0;
+      margin:-1px;
+      overflow:hidden;
+      clip:rect(0,0,0,0);
+      white-space:nowrap;
+      border:0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#/">
+        <div class="brand-badge" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M4 6h16M4 12h10M4 18h16" stroke="white" stroke-opacity="0.9" stroke-width="2" stroke-linecap="round"/>
+            <path d="M18 10l2 2-2 2" stroke="#ff4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span>Skimr</span>
+      </a>
+
+      <div class="nav-actions">
+        <span class="chip">Demo prototype</span>
+        <span class="chip">Shortcut: <span class="kbd">Space</span></span>
+        <a class="btn btn-ghost" href="#/app" style="padding:10px 12px;border-radius:12px;">
+          Try it now
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- LANDING PAGE -->
+  <main id="page-landing" class="page">
+    <section class="hero">
+      <div class="hero-card">
+        <h1 class="headline">Read 3x faster. Starting now.</h1>
+        <p class="subheadline">Speed reading that actually works. One word at a time, perfectly paced.</p>
+
+        <div class="cta-row">
+          <button class="btn btn-primary" id="landingTryBtn">
+            Try it now <span aria-hidden="true">→</span>
+          </button>
+          <div class="mini-note">
+            <span class="kbd">Space</span> to play/pause once you’re in the app
+          </div>
+        </div>
+
+        <div class="feature-grid" aria-label="Features">
+          <div class="feature">
+            <h3>Adjustable speed</h3>
+            <p>Dial your pace from 100–800 WPM, with beginner-to-expert presets.</p>
+          </div>
+          <div class="feature">
+            <h3>Works with any text</h3>
+            <p>Choose a sample or paste your own. No setup, no sign-up.</p>
+          </div>
+          <div class="feature">
+            <h3>Track your progress</h3>
+            <p>See words read, time remaining, and a clean progress bar as you go.</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="hero-side" aria-label="Preview">
+        <div class="mock">
+          <div class="mock-top">
+            <span>Preview</span>
+            <span class="chip" style="padding:6px 10px;">ORP highlight</span>
+          </div>
+          <div class="mock-word" aria-hidden="true">
+            <span><span>pro</span><span class="orp">d</span><span>uctivity</span></span>
+          </div>
+          <div class="mock-bar" aria-hidden="true"><div></div></div>
+          <p class="footer-note" style="margin:14px 0 0;">
+            The red letter marks your “optimal recognition point” — where your eyes naturally lock in.
+          </p>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <!-- APP PAGE -->
+  <main id="page-app" class="page hidden">
+    <div class="app-layout">
+      <!-- Main reader -->
+      <section class="panel">
+        <div class="word-stage">
+          <div class="word-display" role="region" aria-label="Speed reading display">
+            <div id="wordEl" class="word" aria-live="polite">Ready</div>
+            <div class="stage-hint">
+              <span>Play/Pause: <span class="kbd">Space</span></span>
+              <span id="statusEl">Paused</span>
+            </div>
+          </div>
+
+          <div class="progress-row" aria-label="Progress">
+            <div class="progress" aria-hidden="true"><div id="progressFill"></div></div>
+            <div class="progress-meta" id="progressMeta">0 / 0</div>
+          </div>
+
+          <div class="controls" aria-label="Controls">
+            <div class="controls-left">
+              <button class="icon-btn" id="backBtn" title="Back 10 words (←)">
+                <span class="sr-only">Back 10</span>
+                ⟲
+              </button>
+
+              <button class="icon-btn primary" id="playBtn" title="Play/Pause (Space)">
+                <span class="sr-only">Play/Pause</span>
+                ▶︎
+              </button>
+
+              <button class="icon-btn" id="fwdBtn" title="Forward 10 words (→)">
+                <span class="sr-only">Forward 10</span>
+                ⟳
+              </button>
+
+              <button class="icon-btn" id="restartBtn" title="Restart (R)">
+                <span class="sr-only">Restart</span>
+                ↺
+              </button>
+            </div>
+
+            <div class="controls-right">
+              <div class="wpm-box" aria-label="Speed control">
+                <div class="wpm-top">
+                  <div class="wpm-label">Words per minute (WPM)</div>
+                  <div class="wpm-value"><span id="wpmVal">300</span></div>
+                </div>
+                <input id="wpmSlider" type="range" min="100" max="800" step="10" value="300" />
+                <div class="presets" id="presetRow" aria-label="WPM presets">
+                  <div class="pill" data-wpm="200">200 · Beginner</div>
+                  <div class="pill active" data-wpm="300">300 · Normal</div>
+                  <div class="pill" data-wpm="450">450 · Fast</div>
+                  <div class="pill" data-wpm="600">600 · Expert</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="footer-note">
+            Smart timing is on: longer pauses for punctuation, long words, and paragraph breaks.
+          </p>
+        </div>
+      </section>
+
+      <!-- Sidebar -->
+      <aside class="panel sidebar">
+        <h2>Text</h2>
+
+        <div class="field">
+          <label for="sampleSelect">Choose a sample</label>
+          <select id="sampleSelect">
+            <option value="psychology">“The Psychology of Money” excerpt (500 words)</option>
+            <option value="tech">Tech news article (400 words)</option>
+            <option value="classic">Classic literature passage (300 words)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="textArea">Or paste your own text</label>
+          <textarea id="textArea" spellcheck="false"></textarea>
+        </div>
+
+        <div class="row" style="margin-bottom:6px;">
+          <button class="btn" id="useTextBtn">Load text</button>
+          <button class="btn btn-ghost" id="resetSampleBtn">Reset to sample</button>
+        </div>
+
+        <h2 style="margin-top:18px;">Stats</h2>
+        <div class="stats" aria-label="Stats panel">
+          <div class="stat">
+            <div class="k">Current WPM</div>
+            <div class="v" id="statWpm">300</div>
+          </div>
+          <div class="stat">
+            <div class="k">Words read</div>
+            <div class="v" id="statWords">0 / 0</div>
+          </div>
+          <div class="stat">
+            <div class="k">Time remaining</div>
+            <div class="v small" id="statTime">0:00</div>
+          </div>
+          <div class="stat">
+            <div class="k">Books finished this month</div>
+            <div class="v">3</div>
+          </div>
+          <div class="stat">
+            <div class="k">Reading streak</div>
+            <div class="v">7 days</div>
+          </div>
+          <div class="stat">
+            <div class="k">Mode</div>
+            <div class="v small" id="statMode">Smart timing</div>
+          </div>
+        </div>
+
+        <p class="footer-note">
+          Tip: Use <span class="kbd">←</span>/<span class="kbd">→</span> to skip 10 words, <span class="kbd">R</span> to restart.
+        </p>
+      </aside>
+    </div>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
