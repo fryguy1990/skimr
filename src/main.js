@@ -1,41 +1,65 @@
 window.addEventListener("DOMContentLoaded", () => {
-  // PASTE YOUR ENTIRE ORIGINAL SCRIPT CONTENT HERE
 
+/**********************
+ * Simple "routing"
+ **********************/
+function setupRouting() {
+  const pageLanding = document.getElementById("page-landing");
+  const pageApp = document.getElementById("page-app");
+  const pageLibrary = document.getElementById("page-library");
 
-    /**********************
-     * Simple "routing"
-     **********************/
-    const pageLanding = document.getElementById("page-landing");
-    const pageApp = document.getElementById("page-app");
-
-    function renderRoute(){
-      const hash = location.hash || "#/";
-      const isApp = hash.startsWith("#/app");
-      pageLanding.classList.toggle("hidden", isApp);
-      pageApp.classList.toggle("hidden", !isApp);
-
-      // When entering app, ensure word display is ready
-      if (isApp) {
-        // Focus: allow spacebar immediately
-        setTimeout(() => {
-          document.body.focus?.();
-          // If nothing loaded yet (edge), load default sample
-          if (!state.words.length) {
-            loadSample("psychology");
-          }
-          updateUI();
-          flashWord(state.index, true);
-        }, 0);
-      } else {
-        // Leaving app: pause playback
-        if (state.isPlaying) togglePlay(false);
-      }
-    }
-    window.addEventListener("hashchange", renderRoute);
-
-    document.getElementById("landingTryBtn").addEventListener("click", () => {
-      location.hash = "#/app";
+  if (!pageLanding || !pageApp || !pageLibrary) {
+    console.error("Routing error: missing one of page containers", {
+      pageLanding,
+      pageApp,
+      pageLibrary,
     });
+    return;
+  }
+
+  function renderRoute() {
+    const hash = window.location.hash || "#/";
+    const isApp = hash.startsWith("#/app");
+    const isLibrary = hash.startsWith("#/library");
+
+    pageLanding.classList.toggle("hidden", isApp || isLibrary);
+    pageApp.classList.toggle("hidden", !isApp);
+    pageLibrary.classList.toggle("hidden", !isLibrary);
+
+    // Entering app: make sure reader is ready
+    if (isApp) {
+      setTimeout(() => {
+        document.body.focus?.();
+
+        if (!state.words || !state.words.length) {
+          loadSample("psychology");
+        }
+
+        updateUI();
+        flashWord(state.index, true);
+      }, 0);
+    } else {
+      if (state.isPlaying) togglePlay(false);
+    }
+  }
+
+  window.addEventListener("hashchange", renderRoute);
+  renderRoute(); // run once on load
+}
+
+/**********************
+ * Landing button
+ **********************/
+function setupLandingButton() {
+  const landingTryBtn = document.getElementById("landingTryBtn");
+  if (landingTryBtn) {
+    landingTryBtn.addEventListener("click", () => {
+      window.location.hash = "#/app";
+    });
+  }
+}
+
+
 
     /**********************
      * Dummy preloaded texts
@@ -99,6 +123,20 @@ For a time, he did nothing but stand. And in that stillness, the town seemed les
       }
     };
 
+function buildDefaultDocsFromSamples() {
+  return [
+    { id: "psychology", title: SAMPLES.psychology.title, sampleKey: "psychology" },
+    { id: "tech", title: SAMPLES.tech.title, sampleKey: "tech" },
+    { id: "classic", title: SAMPLES.classic.title, sampleKey: "classic" },
+  ].map(d => ({
+    ...d,
+    position: 0,
+    totalWords: 0,
+    updatedAt: Date.now(),
+  }));
+}
+
+
     /**********************
      * Reader state
      **********************/
@@ -111,6 +149,26 @@ For a time, he did nothing but stand. And in that stillness, the town seemed les
       activeSampleKey: "psychology",
       lastWordRendered: "",
     };
+
+    let docs = [];
+let currentDocId = "psychology";
+
+const STORAGE_KEY = "skimr_docs_v1";
+
+function saveDocs() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(docs));
+}
+
+function loadDocs() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 
     const wordEl = document.getElementById("wordEl");
     const statusEl = document.getElementById("statusEl");
@@ -328,6 +386,10 @@ For a time, he did nothing but stand. And in that stillness, the town seemed les
         statusEl.textContent = "Paused";
         playBtn.textContent = "▶︎";
         clearTimer();
+
+        saveProgressToDoc();
+        renderLibrary();
+
       }
       updateUI();
     }
@@ -404,6 +466,48 @@ For a time, he did nothing but stand. And in that stillness, the town seemed les
       updatePresetActive();
     }
 
+function saveProgressToDoc() {
+  const doc = docs.find(d => d.id === currentDocId);
+  if (!doc) return;
+
+  doc.position = state.index;
+  doc.totalWords = state.words.length;
+  doc.updatedAt = Date.now();
+
+  saveDocs();
+}
+
+
+function renderLibrary() {
+  const el = document.getElementById("libraryList");
+  if (!el) return;
+
+  if (!docs.length) {
+    el.innerHTML = `<div class="footer-note">No documents yet.</div>`;
+    return;
+  }
+
+  el.innerHTML = docs.map(doc => {
+    const total = doc.totalWords || 0;
+    const pct = total ? Math.round((doc.position / total) * 100) : 0;
+
+    return `
+      <div class="stat" style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
+          <div>
+            <div style="font-weight:700">${doc.title}</div>
+            <div style="color:rgba(255,255,255,.65);font-size:12px;">${pct}% complete</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn" data-open="${doc.id}">Open</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+
     /**********************
      * Loading samples / user text
      **********************/
@@ -426,6 +530,20 @@ For a time, he did nothing but stand. And in that stillness, the town seemed les
       showToast(`Loaded: ${sample.title}`);
     }
 
+function buildDefaultDocsFromSamples() {
+  return [
+    { id: "psychology", title: SAMPLES.psychology.title, sampleKey: "psychology" },
+    { id: "tech", title: SAMPLES.tech.title, sampleKey: "tech" },
+    { id: "classic", title: SAMPLES.classic.title, sampleKey: "classic" },
+  ].map(d => ({
+    ...d,
+    position: 0,
+    totalWords: 0,
+    updatedAt: Date.now(),
+  }));
+}
+
+
     function loadFromTextarea(){
       const raw = textArea.value || "";
       const tokens = tokenizeWithParagraphs(raw);
@@ -444,6 +562,21 @@ For a time, he did nothing but stand. And in that stillness, the town seemed les
 
       showToast("Text loaded");
     }
+
+function extractTextFromHtml(html) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+
+  // Remove noisy elements
+  doc.querySelectorAll("script, style, nav, footer, header, aside, noscript").forEach(el => el.remove());
+
+  // Prefer <article> if present, else fall back to body
+  const root = doc.querySelector("article") || doc.body;
+  const text = (root?.innerText || "").trim();
+
+  // Normalize spacing
+  return text.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 
     /**********************
      * Event bindings
@@ -518,10 +651,193 @@ For a time, he did nothing but stand. And in that stillness, the town seemed les
       }
     });
 
+function renderLibrary() {
+  const el = document.getElementById("libraryList");
+  if (!el) return;
+
+  if (!docs.length) {
+    el.innerHTML = `<div class="footer-note">No documents yet.</div>`;
+    return;
+  }
+
+  el.innerHTML = docs.map(doc => {
+    const total = doc.totalWords || 0;
+    const pct = total ? Math.round((doc.position / total) * 100) : 0;
+
+    return `
+      <div class="stat" style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
+          <div>
+            <div style="font-weight:700">${doc.title}</div>
+            <div style="color:rgba(255,255,255,.65);font-size:12px;">${pct}% complete</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn" data-open="${doc.id}">Open</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+document.addEventListener("click", (e) => {
+  const openId = e.target.closest("[data-open]")?.getAttribute("data-open");
+  if (!openId) return;
+
+  currentDocId = openId;
+
+  saveDocs();
+
+  const doc = docs.find(d => d.id === openId);
+  if (!doc) return;
+
+  if (doc.sampleKey) {
+  loadSample(doc.sampleKey);
+} else {
+  const text = doc.rawText || "";
+  const tokens = tokenizeWithParagraphs(text);
+
+  togglePlay(false);
+  state.words = tokens;
+  state.index = doc.position || 0;
+
+  textArea.value = text;
+
+  updateUI();
+  flashWord(Math.min(state.index, state.words.length - 1), true);
+}
+
+  location.hash = "#/app";
+});
+
+const createDocBtn = document.getElementById("createDocBtn");
+if (createDocBtn) {
+  createDocBtn.addEventListener("click", () => {
+    const title = document.getElementById("newDocTitle")?.value?.trim() || "Untitled";
+    const text = document.getElementById("newDocText")?.value?.trim() || "";
+
+    if (!text) {
+      showToast("Paste some text first");
+      return;
+    }
+
+    const id = "doc_" + Math.random().toString(16).slice(2);
+    const tokens = tokenizeWithParagraphs(text);
+
+    const newDoc = {
+      id,
+      title,
+      sourceType: "paste",
+      rawText: text,
+      position: 0,
+      totalWords: tokens.length,
+      updatedAt: Date.now(),
+    };
+
+    docs.unshift(newDoc);
+    currentDocId = id;
+
+    saveDocs();
+    renderLibrary();
+
+    // Load into reader immediately
+    togglePlay(false);
+    state.words = tokens;
+    state.index = 0;
+    textArea.value = text;
+    updateUI();
+    flashWord(0, true);
+
+    showToast("Document created");
+    location.hash = "#/app";
+  });
+}
+
+const importUrlBtn = document.getElementById("importUrlBtn");
+if (importUrlBtn) {
+  importUrlBtn.addEventListener("click", async () => {
+    const url = document.getElementById("importUrl")?.value?.trim() || "";
+    if (!url) {
+      showToast("Paste a URL first");
+      return;
+    }
+
+    togglePlay(false);
+    showToast("Importing...");
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const html = await res.text();
+      const text = extractTextFromHtml(html);
+
+      if (!text || text.length < 200) {
+        throw new Error("Could not extract readable text (site may be blocked).");
+      }
+
+      // Create a new doc from imported text
+      const id = "url_" + Math.random().toString(16).slice(2);
+      const tokens = tokenizeWithParagraphs(text);
+
+      const newDoc = {
+        id,
+        title: `Imported: ${new URL(url).hostname}`,
+        sourceType: "url",
+        sourceUrl: url,
+        rawText: text,
+        position: 0,
+        totalWords: tokens.length,
+        updatedAt: Date.now(),
+      };
+
+      docs.unshift(newDoc);
+      currentDocId = id;
+
+      saveDocs();
+      renderLibrary();
+
+      // Load into reader immediately
+      state.words = tokens;
+      state.index = 0;
+      textArea.value = text;
+      updateUI();
+      flashWord(0, true);
+
+      showToast("Imported!");
+      location.hash = "#/app";
+    } catch (err) {
+      console.error(err);
+      showToast("Import failed (blocked site). We'll add a proxy next.");
+    }
+  });
+}
+
+
+
     /**********************
      * Initialize
      **********************/
-    // Load default sample so app is instant
+    // Ensure a default sample is loaded for first-time use
+  if (!state.words || !state.words.length) {
     loadSample("psychology");
-    renderRoute();
+  }
+
+const loaded = loadDocs();
+docs = (loaded && Array.isArray(loaded)) ? loaded : buildDefaultDocsFromSamples();
+
+// Recompute totalWords for sample-based docs (safe + ensures totals are correct)
+docs.forEach(d => {
+  if (d.sampleKey && SAMPLES[d.sampleKey]) {
+    const tokens = tokenizeWithParagraphs(SAMPLES[d.sampleKey].text);
+    d.totalWords = tokens.length;
+  }
+});
+
+saveDocs();     // ensures first-time users get docs saved
+renderLibrary();
+
+
+  setupRouting();
+  setupLandingButton();
 });

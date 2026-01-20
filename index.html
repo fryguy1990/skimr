@@ -32,13 +32,20 @@
       <div class="nav-actions">
         <span class="chip">Demo prototype</span>
         <span class="chip">Shortcut: <span class="kbd">Space</span></span>
-        <a class="btn btn-ghost" href="#/app" style="padding:10px 12px;border-radius:12px;">
+        
+        <a class="btn btn-ghost" href="#/library" style="padding:10px 12px;border-radius:12px;">
+          Library
+        </a>
+        
+        <a class="btn btn-ghost" href="#/app" style="padding:10px 12px;border-radius:12px;">    
           Try it now
           <span aria-hidden="true">→</span>
         </a>
       </div>
     </div>
   </div>
+
+
 
   <!-- LANDING PAGE -->
   <main id="page-landing" class="page">
@@ -155,6 +162,7 @@
         </div>
       </section>
 
+
       <!-- Sidebar -->
       <aside class="panel sidebar">
         <h2>Text</h2>
@@ -212,6 +220,58 @@
       </aside>
     </div>
   </main>
+
+<!-- LIBRARY PAGE -->
+<main id="page-library" class="page hidden">
+  <section class="panel">
+    <h1 style="margin:0 0 12px;">Library</h1>
+    <p style="margin:0 0 18px;color:rgba(255,255,255,.7);">
+      Your saved documents live here. Pick one and continue reading.
+    </p>
+    
+<div class="panel" style="margin-bottom:14px;">
+  <h2 style="margin:0 0 10px;">Import from URL</h2>
+
+  <input
+    id="importUrl"
+    placeholder="Paste an article URL (example: https://example.com/article)"
+    style="width:100%;margin-bottom:10px;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.2);color:white;"
+  />
+
+  <div style="display:flex;gap:10px;justify-content:flex-end;">
+    <button class="btn btn-primary" id="importUrlBtn">Import</button>
+  </div>
+
+  <p style="margin:10px 0 0;color:rgba(255,255,255,.6);font-size:12px;">
+    Note: Some sites block browser imports. If it fails, we’ll add a Vercel proxy next.
+  </p>
+</div>
+
+
+    <div class="panel" style="margin-bottom:14px;">
+  <h2 style="margin:0 0 10px;">Create new document</h2>
+
+  <input
+    id="newDocTitle"
+    placeholder="Title (optional)"
+    style="width:100%;margin-bottom:10px;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.2);color:white;"
+  />
+
+  <textarea
+    id="newDocText"
+    placeholder="Paste text here..."
+    style="width:100%;min-height:120px;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.2);color:white;resize:vertical;"
+  ></textarea>
+
+  <div style="margin-top:10px;display:flex;gap:10px;justify-content:flex-end;">
+    <button class="btn btn-primary" id="createDocBtn">Create</button>
+  </div>
+</div>
+
+    
+    <div id="libraryList"></div>
+  </section>
+</main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
