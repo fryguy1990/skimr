@@ -566,15 +566,28 @@ function buildDefaultDocsFromSamples() {
 function extractTextFromHtml(html) {
   const doc = new DOMParser().parseFromString(html, "text/html");
 
-  // Remove noisy elements
-  doc.querySelectorAll("script, style, nav, footer, header, aside, noscript").forEach(el => el.remove());
+  // Remove obvious noise
+  doc.querySelectorAll(
+    "script, style, nav, footer, header, aside, noscript, iframe, form, button"
+  ).forEach(el => el.remove());
 
-  // Prefer <article> if present, else fall back to body
-  const root = doc.querySelector("article") || doc.body;
-  const text = (root?.innerText || "").trim();
+  // Prefer common content containers
+  const root =
+    doc.querySelector("article") ||
+    doc.querySelector("main") ||
+    doc.querySelector('[role="main"]') ||
+    doc.body;
 
-  // Normalize spacing
-  return text.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  let text = (root?.innerText || "").trim();
+
+  // Normalize whitespace
+  text = text
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return text;
 }
 
 
@@ -770,10 +783,12 @@ if (importUrlBtn) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const html = await res.text();
+      const title = extractTitleFromHtml(html, url);
       const text = extractTextFromHtml(html);
 
-      if (!text || text.length < 200) {
-        throw new Error("Could not extract readable text (site may be blocked).");
+
+      if (!text || text.length < 400) {
+        throw new Error("Text extraction produced too little content.");
       }
 
       // Create a new doc from imported text
@@ -782,7 +797,7 @@ if (importUrlBtn) {
 
       const newDoc = {
         id,
-        title: `Imported: ${new URL(url).hostname}`,
+        title: title,
         sourceType: "url",
         sourceUrl: url,
         rawText: text,
@@ -811,6 +826,20 @@ if (importUrlBtn) {
       showToast("Import failed. Try another URL or use Paste Text.");
     }
   });
+}
+
+function extractTitleFromHtml(html, fallbackUrl) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const og = doc.querySelector('meta[property="og:title"]')?.getAttribute("content");
+  const title = og || doc.querySelector("title")?.textContent || "";
+  const cleaned = title.replace(/\s+/g, " ").trim();
+  if (cleaned) return cleaned;
+
+  try {
+    return new URL(fallbackUrl).hostname;
+  } catch {
+    return "Imported article";
+  }
 }
 
 
