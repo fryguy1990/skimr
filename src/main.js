@@ -1,3 +1,9 @@
+import * as pdfjsLib from "pdfjs-dist";
+import pdfWorker from "pdfjs-dist/build/pdf.worker?url";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+
+
 window.addEventListener("DOMContentLoaded", () => {
 
 /**********************
@@ -123,18 +129,7 @@ For a time, he did nothing but stand. And in that stillness, the town seemed les
       }
     };
 
-function buildDefaultDocsFromSamples() {
-  return [
-    { id: "psychology", title: SAMPLES.psychology.title, sampleKey: "psychology" },
-    { id: "tech", title: SAMPLES.tech.title, sampleKey: "tech" },
-    { id: "classic", title: SAMPLES.classic.title, sampleKey: "classic" },
-  ].map(d => ({
-    ...d,
-    position: 0,
-    totalWords: 0,
-    updatedAt: Date.now(),
-  }));
-}
+
 
 
     /**********************
@@ -388,7 +383,6 @@ function loadDocs() {
         clearTimer();
 
         saveProgressToDoc();
-        renderLibrary();
 
       }
       updateUI();
@@ -777,6 +771,7 @@ if (importUrlBtn) {
 
     togglePlay(false);
     showToast("Importing...");
+    importUrlBtn.disabled = true;
 
     try {
       const res = await fetch(`/api/fetch?url=${encodeURIComponent(url)}`);
@@ -786,18 +781,16 @@ if (importUrlBtn) {
       const title = extractTitleFromHtml(html, url);
       const text = extractTextFromHtml(html);
 
-
       if (!text || text.length < 400) {
         throw new Error("Text extraction produced too little content.");
       }
 
-      // Create a new doc from imported text
       const id = "url_" + Math.random().toString(16).slice(2);
       const tokens = tokenizeWithParagraphs(text);
 
       const newDoc = {
         id,
-        title: title,
+        title,
         sourceType: "url",
         sourceUrl: url,
         rawText: text,
@@ -812,7 +805,6 @@ if (importUrlBtn) {
       saveDocs();
       renderLibrary();
 
-      // Load into reader immediately
       state.words = tokens;
       state.index = 0;
       textArea.value = text;
@@ -820,13 +812,98 @@ if (importUrlBtn) {
       flashWord(0, true);
 
       showToast("Imported!");
+      const urlInput = document.getElementById("importUrl");
+      if (urlInput) urlInput.value = "";
+
       location.hash = "#/app";
     } catch (err) {
       console.error(err);
       showToast("Import failed. Try another URL or use Paste Text.");
+    } finally {
+      importUrlBtn.disabled = false;
     }
   });
 }
+
+const importPdfBtn = document.getElementById("importPdfBtn");
+if (importPdfBtn) {
+  importPdfBtn.addEventListener("click", async () => {
+    const fileInput = document.getElementById("pdfFile");
+    const file = fileInput?.files?.[0];
+
+    if (!file) {
+      showToast("Choose a PDF first");
+      return;
+    }
+
+    importPdfBtn.disabled = true;
+    showToast("Importing PDF...");
+
+    try {
+      togglePlay(false);
+
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+      let fullText = "";
+
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const content = await page.getTextContent();
+
+        const pageText = content.items
+          .map(item => ("str" in item ? item.str : ""))
+          .join(" ");
+
+        fullText += pageText + "\n\n";
+      }
+
+      const cleaned = fullText
+        .replace(/[ \t]+/g, " ")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+
+      if (!cleaned || cleaned.length < 200) {
+        throw new Error("PDF text extraction produced too little text.");
+      }
+
+      const id = "pdf_" + Math.random().toString(16).slice(2);
+      const tokens = tokenizeWithParagraphs(cleaned);
+
+      const newDoc = {
+        id,
+        title: file.name.replace(/\.pdf$/i, ""),
+        sourceType: "pdf",
+        rawText: cleaned,
+        position: 0,
+        totalWords: tokens.length,
+        updatedAt: Date.now(),
+      };
+
+      docs.unshift(newDoc);
+      currentDocId = id;
+
+      saveDocs();
+      renderLibrary();
+
+      // Load into reader immediately
+      state.words = tokens;
+      state.index = 0;
+      textArea.value = cleaned;
+      updateUI();
+      flashWord(0, true);
+
+      showToast("PDF imported!");
+      location.hash = "#/app";
+    } catch (err) {
+      console.error(err);
+      showToast("PDF import failed (scanned PDFs need OCR).");
+    } finally {
+      importPdfBtn.disabled = false;
+    }
+  });
+}
+
 
 function extractTitleFromHtml(html, fallbackUrl) {
   const doc = new DOMParser().parseFromString(html, "text/html");

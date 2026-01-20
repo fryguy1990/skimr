@@ -238,6 +238,26 @@
     style="width:100%;margin-bottom:10px;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.2);color:white;"
   />
 
+<div class="panel" style="margin-bottom:14px;">
+  <h2 style="margin:0 0 10px;">Import PDF</h2>
+
+  <input
+    id="pdfFile"
+    type="file"
+    accept="application/pdf"
+    style="width:100%;margin-bottom:10px;"
+  />
+
+  <div style="display:flex;gap:10px;justify-content:flex-end;">
+    <button class="btn btn-primary" id="importPdfBtn">Import PDF</button>
+  </div>
+
+  <p style="margin:10px 0 0;color:rgba(255,255,255,.6);font-size:12px;">
+    Tip: PDFs with selectable text import best. Scanned PDFs will need OCR (later).
+  </p>
+</div>
+
+  
   <div style="display:flex;gap:10px;justify-content:flex-end;">
     <button class="btn btn-primary" id="importUrlBtn">Import</button>
   </div>
