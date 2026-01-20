@@ -766,7 +766,7 @@ if (importUrlBtn) {
     showToast("Importing...");
 
     try {
-      const res = await fetch(url);
+      const res = await fetch(`/api/fetch?url=${encodeURIComponent(url)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const html = await res.text();
@@ -808,7 +808,7 @@ if (importUrlBtn) {
       location.hash = "#/app";
     } catch (err) {
       console.error(err);
-      showToast("Import failed (blocked site). We'll add a proxy next.");
+      showToast("Import failed. Try another URL or use Paste Text.");
     }
   });
 }
