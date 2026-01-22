@@ -7,7 +7,7 @@ export default async function handler(req, res) {
       return;
     }
 
-    // Basic safety: only allow http/https
+    // Only allow http/https
     let parsed;
     try {
       parsed = new URL(url);
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
       return;
     }
 
-    // Optional: block localhost/private network targets (simple protection)
+    // Block localhost/private network targets (simple SSRF protection)
     const hostname = parsed.hostname.toLowerCase();
     if (
       hostname === "localhost" ||
@@ -34,9 +34,7 @@ export default async function handler(req, res) {
 
     const upstream = await fetch(url, {
       headers: {
-        // Helps many sites return readable HTML
-        "User-Agent":
-          "Mozilla/5.0 (compatible; SkimrDemo/1.0; +https://vercel.com)",
+        "User-Agent": "Mozilla/5.0 (compatible; SkimrDemo/1.0)",
         Accept: "text/html,application/xhtml+xml",
       },
     });
@@ -48,10 +46,8 @@ export default async function handler(req, res) {
 
     const html = await upstream.text();
 
-    // CORS headers so your frontend can call this endpoint
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Content-Type", "text/html; charset=utf-8");
-
     res.status(200).send(html);
   } catch (err) {
     res.status(500).send("Proxy failed");
