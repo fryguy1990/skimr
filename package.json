@@ -4,17 +4,21 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"vite\" \"node server/index.js\"",
     "build": "vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "vite": "npm:rolldown-vite@7.2.5"
   },
   "overrides": {
     "vite": "npm:rolldown-vite@7.2.5"
   },
   "dependencies": {
+    "epubjs": "^0.3.93",
+    "express": "^5.2.1",
+    "jszip": "^3.10.1",
     "pdfjs-dist": "^5.4.530"
   }
 }

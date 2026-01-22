@@ -12,7 +12,6 @@
 
   <!-- Your CSS file -->
 <link rel="stylesheet" href="/src/style.css" />
-<script type="module" src="/src/main.js"></script>
 
 </head>
 
@@ -62,6 +61,8 @@
             <span class="kbd">Space</span> to play/pause once you’re in the app
           </div>
         </div>
+        
+        <button id="landingResumeBtn" class="btn">Resume reading</button>
 
         <div class="feature-grid" aria-label="Features">
           <div class="feature">
@@ -127,6 +128,9 @@
                 <span class="sr-only">Play/Pause</span>
                 ▶︎
               </button>
+
+<a class="btn" href="#/library">Library</a>
+
 
               <button class="icon-btn" id="fwdBtn" title="Forward 10 words (→)">
                 <span class="sr-only">Forward 10</span>
@@ -224,21 +228,35 @@
 <!-- LIBRARY PAGE -->
 <main id="page-library" class="page hidden">
   <section class="panel">
+    <button id="goAppBtn" class="btn">Back to Reader</button>
     <h1 style="margin:0 0 12px;">Library</h1>
     <p style="margin:0 0 18px;color:rgba(255,255,255,.7);">
       Your saved documents live here. Pick one and continue reading.
     </p>
-    
-<div class="panel" style="margin-bottom:14px;">
+
+<!-- URL -->
+<div class="panel panel-stack">
   <h2 style="margin:0 0 10px;">Import from URL</h2>
 
   <input
-    id="importUrl"
-    placeholder="Paste an article URL (example: https://example.com/article)"
-    style="width:100%;margin-bottom:10px;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.2);color:white;"
-  />
+  id="importUrl"
+  class="input"
+  placeholder="Paste an article URL (example: https://example.com/article)"
+  style="margin-bottom:10px;"
+/>
 
-<div class="panel" style="margin-bottom:14px;">
+
+  <div class="row-end">
+    <button class="btn btn-primary" id="importUrlBtn">Import</button>
+  </div>
+
+  <p style="margin:10px 0 0;color:rgba(255,255,255,.6);font-size:12px;">
+    Note: Some sites block browser imports. If it fails, we’ll add a Vercel proxy next.
+  </p>
+</div>
+
+<!-- PDF -->
+<div class="panel panel-stack">
   <h2 style="margin:0 0 10px;">Import PDF</h2>
 
   <input
@@ -257,6 +275,27 @@
   </p>
 </div>
 
+<!-- EPUB -->
+<div class="panel panel-stack">
+  <h2 style="margin:0 0 10px;">Import EPUB</h2>
+
+  <input
+    id="epubFile"
+    type="file"
+    accept=".epub,application/epub+zip"
+    style="width:100%;margin-bottom:10px;"
+  />
+
+  <div style="display:flex;gap:10px;justify-content:flex-end;">
+    <button class="btn btn-primary" id="importEpubBtn">Import EPUB</button>
+  </div>
+
+  <p style="margin:10px 0 0;color:rgba(255,255,255,.6);font-size:12px;">
+    EPUBs import cleanly and usually produce great reading text.
+  </p>
+</div>
+
+
   
   <div style="display:flex;gap:10px;justify-content:flex-end;">
     <button class="btn btn-primary" id="importUrlBtn">Import</button>
@@ -268,27 +307,29 @@
 </div>
 
 
-    <div class="panel" style="margin-bottom:14px;">
+  <div class="panel panel-stack">
   <h2 style="margin:0 0 10px;">Create new document</h2>
 
-  <input
-    id="newDocTitle"
-    placeholder="Title (optional)"
-    style="width:100%;margin-bottom:10px;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.2);color:white;"
-  />
+ <input
+  id="newDocTitle"
+  class="input"
+  placeholder="Title (optional)"
+  style="margin-bottom:10px;"
+/>
+
 
   <textarea
-    id="newDocText"
-    placeholder="Paste text here..."
-    style="width:100%;min-height:120px;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.2);color:white;resize:vertical;"
-  ></textarea>
+  id="newDocText"
+  placeholder="Paste text here..."
+  style="width:100%;min-height:120px;"
+></textarea>
 
   <div style="margin-top:10px;display:flex;gap:10px;justify-content:flex-end;">
     <button class="btn btn-primary" id="createDocBtn">Create</button>
   </div>
 </div>
 
-    
+    <div id="libraryControls"></div>
     <div id="libraryList"></div>
   </section>
 </main>
@@ -296,6 +337,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <!-- Your JS file (IMPORTANT: keep this at the end of body) -->
-  <script type="module" src="src/main.js"></script>
+  <script type="module" src="/src/main.js"></script>
 </body>
 </html>

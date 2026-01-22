@@ -3,6 +3,8 @@ import pdfWorker from "pdfjs-dist/build/pdf.worker?url";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
+import ePub from "epubjs";
+
 
 window.addEventListener("DOMContentLoaded", () => {
 
@@ -34,24 +36,65 @@ function setupRouting() {
 
     // Entering app: make sure reader is ready
     if (isApp) {
-      setTimeout(() => {
-        document.body.focus?.();
+    setTimeout(() => {
+document.body.focus?.();
 
-        if (!state.words || !state.words.length) {
-          loadSample("psychology");
-        }
+if (!Array.isArray(docs) || docs.length === 0) {
+  loadSample("psychology");
+  state.index = 0;
+  state.loadedDocId = "psychology";
+  debugState("ENTER_APP_BEFORE_UI");
+  updateUI();
+  flashWord(0, true);
+  return;
+}
 
-        updateUI();
-        flashWord(state.index, true);
-      }, 0);
-    } else {
-      if (state.isPlaying) togglePlay(false);
-    }
+const doc = docs.find(d => d.id === currentDocId);
+
+// Only (re)load if we haven't loaded this doc yet
+if (state.loadedDocId !== currentDocId) {
+  togglePlay(false);
+
+  if (doc?.sampleKey) {
+    loadSample(doc.sampleKey);
+    state.index = doc.position || 0;
+  } else if (doc?.rawText) {
+    const tokens = tokenizeWithParagraphs(doc.rawText);
+    state.words = tokens;
+    state.index = doc.position || 0;
+    textArea.value = doc.rawText;
+  } else {
+    loadSample("psychology");
+    state.index = 0;
   }
+
+  const maxIndex = Math.max(0, (state.words?.length || 1) - 1);
+  state.index = Math.min(Math.max(0, state.index || 0), maxIndex);
+
+  state.loadedDocId = currentDocId;
+}
+
+updateUI();
+flashWord(Math.min(state.index, state.words.length - 1), true);
+
+}, 0);
+
+    } else {
+      // Leaving the app view: always persist progress
+      if (state.isPlaying) togglePlay(false);
+      checkpointProgress(true);  // saves even if paused
+
+      debugState("LEAVE_APP_AFTER_SAVE");
+
+      // Refresh library UI so progress updates immediately
+      renderLibrary();
+    }
+  } // ✅ closes renderRoute()
 
   window.addEventListener("hashchange", renderRoute);
   renderRoute(); // run once on load
-}
+} // ✅ closes setupRouting()
+
 
 /**********************
  * Landing button
@@ -65,6 +108,19 @@ function setupLandingButton() {
   }
 }
 
+const resumeBtn = document.getElementById("landingResumeBtn");
+if (resumeBtn) {
+  resumeBtn.addEventListener("click", () => {
+    const lastId = loadLastDocId();
+    if (lastId) currentDocId = lastId;
+    window.location.hash = "#/app";
+  });
+}
+
+if (resumeBtn) {
+  const lastId = loadLastDocId();
+  resumeBtn.style.display = lastId ? "" : "none";
+}
 
 
     /**********************
@@ -138,17 +194,49 @@ For a time, he did nothing but stand. And in that stillness, the town seemed les
     const state = {
       words: [],
       index: 0,
+      displayIndex: 0,
       isPlaying: false,
       wpm: 300,
       timerId: null,
+      autosaveId: null,
+      lastSavedIndex: -1,
       activeSampleKey: "psychology",
       lastWordRendered: "",
+      loadedDocId: null,
     };
-
-    let docs = [];
-let currentDocId = "psychology";
+    
+    function debugState(tag = "") {
+  const doc = docs.find(d => d.id === currentDocId);
+  console.log(`[${tag}]`, {
+    hash: location.hash,
+    currentDocId,
+    isPlaying: state.isPlaying,
+    index: state.index,
+    displayIndex: state.displayIndex,
+    savedPosition: doc?.position,
+    totalWords: state.words?.length,
+  });
+}
 
 const STORAGE_KEY = "skimr_docs_v1";
+
+const LAST_DOC_KEY = "skimr_last_doc_id_v1";
+
+function saveLastDocId(id) {
+  try { localStorage.setItem(LAST_DOC_KEY, String(id || "")); } catch {}
+}
+
+function loadLastDocId() {
+  try { return localStorage.getItem(LAST_DOC_KEY) || ""; } catch { return ""; }
+}
+
+    let docs = [];
+let currentDocId = loadLastDocId() || "psychology";
+
+const libraryUI = {
+  search: "",
+  sort: "recent",
+};
 
 function saveDocs() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(docs));
@@ -328,8 +416,57 @@ function loadDocs() {
       }
     }
 
+    function stopAutosave() {
+  if (state.autosaveId) {
+    clearInterval(state.autosaveId);
+    state.autosaveId = null;
+  }
+}
+
+function checkpointProgress(force = false) {
+  // Only save if doc exists and index moved meaningfully
+  if (!docs?.length) return;
+
+  const cur = Number.isInteger(state.displayIndex) 
+  ? state.displayIndex 
+  : (state.index || 0);
+  const moved = Math.abs(cur - (state.lastSavedIndex || 0));
+  if (!force && moved < 5) return; // save every ~5 words (tweak if you want)
+
+  saveProgressToDoc();
+  saveLastDocId(currentDocId);
+  state.lastSavedIndex = cur;
+}
+
+function startAutosave() {
+  stopAutosave();
+  state.autosaveId = setInterval(() => {
+    if (!state.isPlaying) return;
+    checkpointProgress(false);
+  }, 5000); // every 5s
+}
+
+function persistProgressNow() {
+  saveProgressToDoc();
+  saveLastDocId(currentDocId);
+}
+
+// Save when user leaves the tab / refreshes
+window.addEventListener("beforeunload", () => {
+  persistProgressNow();
+});
+
+// Save when page gets hidden (mobile / tab switch)
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    persistProgressNow();
+  }
+});
+
+
     function flashWord(i, instant=false){
       const w = state.words[i] ?? "";
+      state.displayIndex = i;
       state.lastWordRendered = w;
 
       // fade transition
@@ -348,43 +485,51 @@ function loadDocs() {
       }
     }
 
-    function step(){
-      if (!state.isPlaying) return;
+  function step(){
+  if (!state.isPlaying) return;
 
-      if (state.index >= state.words.length) {
-        togglePlay(false);
-        showToast("Done!");
-        return;
-      }
+  // If we're already past the end, stop
+  if (state.index >= state.words.length) {
+    togglePlay(false);
+    showToast("Done!");
+    return;
+  }
 
-      flashWord(state.index);
-      updateUI();
+  // 1) Render the current word (index is ALWAYS the displayed word)
+  flashWord(Math.min(state.index, Math.max(0, state.words.length - 1)), true);
+  updateUI();
 
-      const delay = computeDelayMs(state.words[state.index], state.wpm);
-      state.index++;
+  // 2) Compute delay for THIS displayed word
+  const delay = computeDelayMs(state.words[state.index], state.wpm);
 
-      state.timerId = setTimeout(step, delay);
-    }
+  // 3) Advance only AFTER the delay
+  state.timerId = setTimeout(() => {
+    state.index++;
+    step();
+  }, delay);
+}
+
 
     function togglePlay(force){
       const next = (typeof force === "boolean") ? force : !state.isPlaying;
       state.isPlaying = next;
 
       if (state.isPlaying) {
-        statusEl.textContent = "Playing";
-        playBtn.textContent = "❚❚";
-        clearTimer();
-        // If we were at end, restart
-        if (state.index >= state.words.length) state.index = 0;
-        step();
+      statusEl.textContent = "Playing";
+      playBtn.textContent = "❚❚";
+      clearTimer();
+
+      if (state.index >= state.words.length) state.index = 0;
+
+      startAutosave();        
+      step();
       } else {
-        statusEl.textContent = "Paused";
-        playBtn.textContent = "▶︎";
-        clearTimer();
-
-        saveProgressToDoc();
-
-      }
+      statusEl.textContent = "Paused";
+      playBtn.textContent = "▶︎";
+      clearTimer();
+      stopAutosave();          
+     checkpointProgress(true); 
+}
       updateUI();
     }
 
@@ -395,6 +540,7 @@ function loadDocs() {
       const showAt = Math.min(state.index, Math.max(0, state.words.length - 1));
       flashWord(showAt, true);
       updateUI();
+      checkpointProgress(true);
     }
 
     function restart(){
@@ -402,6 +548,7 @@ function loadDocs() {
       flashWord(0, true);
       updateUI();
       showToast("Restarted");
+      checkpointProgress(true);
     }
 
     /**********************
@@ -409,7 +556,7 @@ function loadDocs() {
      **********************/
     function updateProgress(){
       const total = state.words.length || 0;
-      const read = Math.min(state.index, total);
+      const read = total ? Math.min(state.index + 1, total) : 0;
       const pct = total ? (read / total) * 100 : 0;
       progressFill.style.width = pct.toFixed(2) + "%";
       progressMeta.textContent = `${read} / ${total}`;
@@ -451,9 +598,8 @@ function loadDocs() {
       updateProgress();
 
       const total = state.words.length || 0;
-      const read = Math.min(state.index, total);
+      const read = total ? Math.min(state.index + 1, total) : 0 ;
       statWords.textContent = `${read} / ${total}`;
-
       const remaining = estimateRemainingSeconds();
       statTime.textContent = formatTime(remaining);
 
@@ -464,41 +610,95 @@ function saveProgressToDoc() {
   const doc = docs.find(d => d.id === currentDocId);
   if (!doc) return;
 
-  doc.position = state.index;
+  const cur = Number.isInteger(state.displayIndex) 
+  ? state.displayIndex 
+  : (state.index || 0);
+  doc.position = Math.max(0, Math.min(cur, Math.max(0, state.words.length - 1)));
   doc.totalWords = state.words.length;
   doc.updatedAt = Date.now();
 
   saveDocs();
 }
 
-
 function renderLibrary() {
   const el = document.getElementById("libraryList");
+
+  const controlsEl = document.getElementById("libraryControls");
+if (controlsEl) {
+  controlsEl.innerHTML = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+      <input id="librarySearch" class="input" placeholder="Search documents..." style="min-width:220px;flex:1;" />
+      <select id="librarySort" class="input" style="min-width:180px;">
+        <option value="recent">Sort: Recently updated</option>
+        <option value="title">Sort: Title A → Z</option>
+        <option value="progress">Sort: Progress (high → low)</option>
+      </select>
+    </div>
+  `;
+}
+  
   if (!el) return;
 
-  if (!docs.length) {
+let list = [...docs];
+
+// Filter
+if (libraryUI.search.trim()) {
+  const q = libraryUI.search.trim().toLowerCase();
+  list = list.filter(d => (d.title || "").toLowerCase().includes(q));
+}
+
+// Sort
+if (libraryUI.sort === "title") {
+  list.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+} else if (libraryUI.sort === "progress") {
+  list.sort((a, b) => {
+    const ap = (a.totalWords ? (a.position || 0) / a.totalWords : 0);
+    const bp = (b.totalWords ? (b.position || 0) / b.totalWords : 0);
+    return bp - ap;
+  });
+} else {
+  // recent
+  list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+}
+
+
+  if (!list.length) {
     el.innerHTML = `<div class="footer-note">No documents yet.</div>`;
     return;
   }
 
-  el.innerHTML = docs.map(doc => {
-    const total = doc.totalWords || 0;
-    const pct = total ? Math.round((doc.position / total) * 100) : 0;
+  el.innerHTML = list.map(doc => {
+  const total = doc.totalWords || 0;
+  const pct = total ? Math.round((doc.position / total) * 100) : 0;
 
-    return `
-      <div class="stat" style="margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
-          <div>
-            <div style="font-weight:700">${doc.title}</div>
-            <div style="color:rgba(255,255,255,.65);font-size:12px;">${pct}% complete</div>
+  const label = (doc.sourceLabel || doc.sourceType || "DOC").toUpperCase();
+
+  return `
+    <div class="stat" style="margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
+        <div style="min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px;">
+              ${doc.title || "Untitled"}
+            </div>
+            <span style="font-size:11px;padding:2px 8px;border:1px solid rgba(255,255,255,.18);border-radius:999px;color:rgba(255,255,255,.8);">
+              ${label}
+            </span>
           </div>
-          <div style="display:flex;gap:8px;">
-            <button class="btn" data-open="${doc.id}">Open</button>
-          </div>
+          <div style="color:rgba(255,255,255,.65);font-size:12px;">${pct}% complete</div>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+          <button class="btn" data-open="${doc.id}">Open</button>
+          <button class="btn" data-rename="${doc.id}">Rename</button>
+          <button class="btn" data-delete="${doc.id}">Delete</button>
         </div>
       </div>
-    `;
-  }).join("");
+    </div>
+  `;
+}).join("");
+
+ 
 }
 
 
@@ -531,6 +731,8 @@ function buildDefaultDocsFromSamples() {
     { id: "classic", title: SAMPLES.classic.title, sampleKey: "classic" },
   ].map(d => ({
     ...d,
+    sourceType: "sample",
+    sourceLabel: "SAMPLE",
     position: 0,
     totalWords: 0,
     updatedAt: Date.now(),
@@ -584,6 +786,21 @@ function extractTextFromHtml(html) {
   return text;
 }
 
+function htmlToCleanText(html) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  doc.querySelectorAll("script, style, nav, footer, header, aside").forEach(el => el.remove());
+
+  let text = (doc.body?.innerText || "").trim();
+
+  text = text
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return text;
+}
+
 
     /**********************
      * Event bindings
@@ -593,6 +810,22 @@ function extractTextFromHtml(html) {
       updateUI();
       // If playing, timing adjusts automatically on next tick
     });
+
+// Library controls
+document.addEventListener("input", (e) => {
+  if (e.target?.id === "librarySearch") {
+    libraryUI.search = e.target.value || "";
+    renderLibrary();
+  }
+});
+
+document.addEventListener("change", (e) => {
+  if (e.target?.id === "librarySort") {
+    libraryUI.sort = e.target.value || "recent";
+    renderLibrary();
+  }
+});
+
 
     document.getElementById("presetRow").addEventListener("click", (e) => {
       const pill = e.target.closest(".pill[data-wpm]");
@@ -658,64 +891,94 @@ function extractTextFromHtml(html) {
       }
     });
 
-function renderLibrary() {
-  const el = document.getElementById("libraryList");
-  if (!el) return;
 
-  if (!docs.length) {
-    el.innerHTML = `<div class="footer-note">No documents yet.</div>`;
+document.addEventListener("click", (e) => {
+  
+  // 1) DELETE (handle first so it doesn't fall through)
+  const deleteId = e.target.closest("[data-delete]")?.getAttribute("data-delete");
+  if (deleteId) {
+    const doc = docs.find(d => d.id === deleteId);
+    const ok = confirm(`Delete "${doc?.title || "Untitled"}"? This can't be undone.`);
+    if (!ok) return;
+
+    docs = docs.filter(d => d.id !== deleteId);
+
+    // If you deleted the current doc, fall back
+    if (currentDocId === deleteId) {
+      currentDocId = docs[0]?.id || "psychology";
+    }
+
+    saveDocs();
+    renderLibrary();
+    showToast("Deleted");
     return;
   }
 
-  el.innerHTML = docs.map(doc => {
-    const total = doc.totalWords || 0;
-    const pct = total ? Math.round((doc.position / total) * 100) : 0;
+  // 2) RENAME
+  const renameId = e.target.closest("[data-rename]")?.getAttribute("data-rename");
+  if (renameId) {
+    const doc = docs.find(d => d.id === renameId);
+    if (!doc) return;
 
-    return `
-      <div class="stat" style="margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
-          <div>
-            <div style="font-weight:700">${doc.title}</div>
-            <div style="color:rgba(255,255,255,.65);font-size:12px;">${pct}% complete</div>
-          </div>
-          <div style="display:flex;gap:8px;">
-            <button class="btn" data-open="${doc.id}">Open</button>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join("");
-}
+    const next = prompt("Rename document:", doc.title || "Untitled");
+    if (next === null) return;
 
-document.addEventListener("click", (e) => {
+    const trimmed = next.trim();
+    if (!trimmed) {
+      showToast("Title can't be empty");
+      return;
+    }
+
+    doc.title = trimmed;
+    doc.updatedAt = Date.now();
+
+    saveDocs();
+    renderLibrary();
+    showToast("Renamed");
+    return;
+  }
+
+  // 3) OPEN
   const openId = e.target.closest("[data-open]")?.getAttribute("data-open");
   if (!openId) return;
+  togglePlay(false);       // hard stop timers/autosave for current doc
+  checkpointProgress(true);
 
+  checkpointProgress(true);
   currentDocId = openId;
+  debugState("OPEN_DOC_CLICK");
+  state.loadedDocId = null; // force router to reload correct doc
+  saveLastDocId(openId);
+  debugState("OPEN_DOC_CLICK");
 
-  saveDocs();
 
   const doc = docs.find(d => d.id === openId);
   if (!doc) return;
 
-  if (doc.sampleKey) {
+ if (doc.sampleKey) {
   loadSample(doc.sampleKey);
-} else {
-  const text = doc.rawText || "";
-  const tokens = tokenizeWithParagraphs(text);
-
-  togglePlay(false);
-  state.words = tokens;
+  // IMPORTANT: restore saved position after loadSample() resets index to 0
   state.index = doc.position || 0;
-
-  textArea.value = text;
-
   updateUI();
   flashWord(Math.min(state.index, state.words.length - 1), true);
-}
+
+  } else {
+    const text = doc.rawText || "";
+    const tokens = tokenizeWithParagraphs(text);
+
+    togglePlay(false);
+    state.words = tokens;
+    state.index = doc.position || 0;
+
+    textArea.value = text;
+
+    updateUI();
+    flashWord(Math.min(state.index, state.words.length - 1), true);
+  }
 
   location.hash = "#/app";
 });
+
 
 const createDocBtn = document.getElementById("createDocBtn");
 if (createDocBtn) {
@@ -733,17 +996,20 @@ if (createDocBtn) {
 
     const newDoc = {
       id,
-      title,
-      sourceType: "paste",
-      rawText: text,
-      position: 0,
-      totalWords: tokens.length,
-      updatedAt: Date.now(),
-    };
+    title,
+    sourceType: "paste",
+    sourceLabel: "PASTE",
+    rawText: text,
+    position: 0,
+  totalWords: tokens.length,
+    updatedAt: Date.now(),
+};
+
 
     docs.unshift(newDoc);
     currentDocId = id;
-
+    state.loadedDocId = null; // force router to reload correct doc
+    saveLastDocId(id);
     saveDocs();
     renderLibrary();
 
@@ -778,8 +1044,17 @@ if (importUrlBtn) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const html = await res.text();
-      const title = extractTitleFromHtml(html, url);
-      const text = extractTextFromHtml(html);
+
+// ✅ Guard: if we didn’t receive real HTML, stop
+const looksLikeHtml = /<html[\s>]/i.test(html) || /<!doctype html/i.test(html);
+if (!looksLikeHtml) {
+  console.warn("Non-HTML returned from /api/fetch:", html.slice(0, 200));
+  throw new Error("Import failed: server did not return an HTML page.");
+}
+
+const title = extractTitleFromHtml(html, url);
+const text = extractTextFromHtml(html);
+
 
       if (!text || text.length < 400) {
         throw new Error("Text extraction produced too little content.");
@@ -792,16 +1067,19 @@ if (importUrlBtn) {
         id,
         title,
         sourceType: "url",
+        sourceLabel: "URL",
         sourceUrl: url,
         rawText: text,
         position: 0,
         totalWords: tokens.length,
         updatedAt: Date.now(),
-      };
+};
+
 
       docs.unshift(newDoc);
       currentDocId = id;
-
+      state.loadedDocId = null; // force router to reload correct doc
+      saveLastDocId(id);
       saveDocs();
       renderLibrary();
 
@@ -818,7 +1096,7 @@ if (importUrlBtn) {
       location.hash = "#/app";
     } catch (err) {
       console.error(err);
-      showToast("Import failed. Try another URL or use Paste Text.");
+      showToast("Import failed (URL fetch may not be set up yet). Try Paste Text for now.");
     } finally {
       importUrlBtn.disabled = false;
     }
@@ -871,18 +1149,21 @@ if (importPdfBtn) {
       const tokens = tokenizeWithParagraphs(cleaned);
 
       const newDoc = {
-        id,
-        title: file.name.replace(/\.pdf$/i, ""),
-        sourceType: "pdf",
-        rawText: cleaned,
-        position: 0,
-        totalWords: tokens.length,
-        updatedAt: Date.now(),
-      };
+  id,
+  title: file.name.replace(/\.pdf$/i, ""),
+  sourceType: "pdf",
+  sourceLabel: "PDF",
+  rawText: cleaned,
+  position: 0,
+  totalWords: tokens.length,
+  updatedAt: Date.now(),
+};
+
 
       docs.unshift(newDoc);
       currentDocId = id;
-
+      state.loadedDocId = null; // force router to reload correct doc
+      saveLastDocId(id);
       saveDocs();
       renderLibrary();
 
@@ -900,6 +1181,136 @@ if (importPdfBtn) {
       showToast("PDF import failed (scanned PDFs need OCR).");
     } finally {
       importPdfBtn.disabled = false;
+      const fileInputEl = document.getElementById("pdfFile");
+if (fileInputEl) fileInputEl.value = "";
+    }
+  });
+}
+
+const importEpubBtn = document.getElementById("importEpubBtn");
+if (importEpubBtn) {
+  importEpubBtn.addEventListener("click", async () => {
+    const fileInput = document.getElementById("epubFile");
+    const file = fileInput?.files?.[0];
+
+    if (!file) {
+      showToast("Choose an EPUB first");
+      return;
+    }
+
+    importEpubBtn.disabled = true;
+    showToast("Importing EPUB...");
+
+    try {
+      togglePlay(false);
+
+      const arrayBuffer = await file.arrayBuffer();
+
+      // Create epub book from buffer
+      const book = ePub(arrayBuffer);
+
+      // Load metadata (title, etc.)
+      let meta = {};
+try {
+  meta = await book.loaded.metadata;
+} catch {
+  meta = {};
+}
+
+
+      // Spine items = readable sections/chapters
+      await book.ready; // important: ensures spine + resources are ready
+
+    const items = book.spine?.items || [];
+    let fullText = "";
+
+    // Keep big books from taking forever on first pass
+    const MAX_SECTIONS = 20;
+
+    for (let i = 0; i < Math.min(items.length, MAX_SECTIONS); i++) {
+    const item = items[i];
+
+    // Try to locate the section reliably
+const section =
+  book.spine.get(item.idref) ||
+  book.spine.get(item.href) ||
+  item;
+
+if (!section) continue;
+
+// Render section content to HTML (more reliable across epubjs builds)
+let html = "";
+try {
+  html = await section.render(book.load.bind(book));
+} catch (e) {
+  console.warn("EPUB section render failed:", e);
+  continue;
+}
+
+// Convert HTML -> clean text
+const chapterText = htmlToCleanText(html);
+
+if (chapterText && chapterText.length > 50) {
+  fullText += chapterText + "\n\n";
+}
+
+// unload to avoid memory bloat (if available)
+try { section.unload?.(); } catch {}
+
+}
+
+      const cleaned = fullText.trim();
+
+console.log("EPUB extracted chars:", cleaned.length);
+
+    if (!cleaned || cleaned.length < 200) {
+    throw new Error("EPUB extraction produced too little text.");
+  }
+
+      const id = "epub_" + Math.random().toString(16).slice(2);
+      const tokens = tokenizeWithParagraphs(cleaned);
+
+     const newDoc = {
+  id,
+  title: meta?.title || file.name.replace(/\.epub$/i, ""),
+  author: meta?.creator || meta?.author || "",
+  sourceType: "epub",
+  sourceLabel: "EPUB",
+  rawText: cleaned,
+  position: 0,
+  totalWords: tokens.length,
+  updatedAt: Date.now(),
+};
+
+
+      docs.unshift(newDoc);
+      currentDocId = id;
+      state.loadedDocId = null; // force router to reload correct doc
+      saveLastDocId(id);
+      saveDocs();
+      renderLibrary();
+
+      // Load into reader immediately
+      state.words = tokens;
+      state.index = 0;
+      textArea.value = cleaned;
+
+      updateUI();
+      flashWord(0, true);
+
+      showToast("EPUB imported!");
+      location.hash = "#/app";
+
+      // Clear input
+      if (fileInput) fileInput.value = "";
+    } catch (err) {
+      console.error("EPUB import failed:", err);
+      showToast("EPUB import failed - check Console for details");
+    } finally {
+      importEpubBtn.disabled = false;
+      const epubInputEl = document.getElementById("epubFile");
+if (epubInputEl) epubInputEl.value = "";
+
     }
   });
 }
@@ -920,7 +1331,6 @@ function extractTitleFromHtml(html, fallbackUrl) {
 }
 
 
-
     /**********************
      * Initialize
      **********************/
@@ -930,20 +1340,44 @@ function extractTitleFromHtml(html, fallbackUrl) {
   }
 
 const loaded = loadDocs();
-docs = (loaded && Array.isArray(loaded)) ? loaded : buildDefaultDocsFromSamples();
 
-// Recompute totalWords for sample-based docs (safe + ensures totals are correct)
+if (loaded && Array.isArray(loaded)) {
+  docs = loaded;
+} else {
+  docs = buildDefaultDocsFromSamples();
+  saveDocs();
+}
+
+// Ensure sample docs have accurate totalWords (for progress %)
 docs.forEach(d => {
   if (d.sampleKey && SAMPLES[d.sampleKey]) {
-    const tokens = tokenizeWithParagraphs(SAMPLES[d.sampleKey].text);
-    d.totalWords = tokens.length;
+    d.totalWords = tokenizeWithParagraphs(SAMPLES[d.sampleKey].text).length;
   }
 });
 
-saveDocs();     // ensures first-time users get docs saved
 renderLibrary();
 
 
+/**********************
+ * Nav buttons
+ **********************/
+function setupNavButtons() {
+  const goLibraryBtn = document.getElementById("goLibraryBtn");
+  if (goLibraryBtn) {
+    goLibraryBtn.addEventListener("click", () => {
+      window.location.hash = "#/library";
+    });
+  }
+
+  const goAppBtn = document.getElementById("goAppBtn");
+  if (goAppBtn) {
+    goAppBtn.addEventListener("click", () => {
+      window.location.hash = "#/app";
+    });
+  }
+}
+
   setupRouting();
   setupLandingButton();
+  setupNavButtons();
 });

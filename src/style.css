@@ -1,4 +1,4 @@
-
+/* Base */
     :root{
       --bg:#1a1a1a;
       --panel:#222;
@@ -31,6 +31,7 @@
 
     .hidden{ display:none !important; }
 
+  
     /* Top nav (subtle) */
     .topbar{
       position:sticky;
@@ -164,6 +165,13 @@
     }
     .btn:hover{ transform: translateY(-1px); border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.08); }
     .btn:active{ transform: translateY(0px); }
+
+.btn:disabled,
+.icon-btn:disabled{
+  opacity: .5;
+  cursor: not-allowed;
+  transform: none !important;
+}
 
     .btn-primary{
       background: linear-gradient(135deg, rgba(255,68,68,.95), rgba(255,68,68,.65));
@@ -488,6 +496,11 @@
       color: rgba(255,255,255,.92);
     }
 
+input[type="file"]{
+  width: 100%;
+  color: var(--muted);
+}
+
     .row{
       display:flex;
       gap:10px;
@@ -533,6 +546,48 @@
       font-size: 12px;
       line-height: 1.45;
     }
+
+/* =========================
+   Library utilities
+   ========================= */
+
+/* Reusable input styling (matches your select/textarea look) */
+.input{
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.20);
+  color: var(--text);
+  padding: 10px 12px;
+  outline: none;
+}
+.input::placeholder{
+  color: rgba(255,255,255,.45);
+}
+
+/* Panel spacing helper (replaces inline margin-bottom) */
+.panel-stack{
+  margin-bottom: 14px;
+}
+
+/* Right-aligned row for buttons */
+.row-end{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+/* Library doc title truncation (so long titles don’t explode layout) */
+.doc-title{
+  font-weight:700;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:420px;
+}
+
 
     .toast{
       position: fixed;
