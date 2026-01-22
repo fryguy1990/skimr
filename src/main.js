@@ -25,6 +25,8 @@ function setupRouting() {
     return;
   }
 
+
+
   function renderRoute() {
     const hash = window.location.hash || "#/";
     const isApp = hash.startsWith("#/app");
@@ -623,7 +625,7 @@ function saveProgressToDoc() {
 function renderLibrary() {
   const el = document.getElementById("libraryList");
 
-  const controlsEl = document.getElementById("libraryControls");
+const controlsEl = document.getElementById("libraryControls");
 if (controlsEl) {
   controlsEl.innerHTML = `
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
@@ -633,9 +635,14 @@ if (controlsEl) {
         <option value="title">Sort: Title A → Z</option>
         <option value="progress">Sort: Progress (high → low)</option>
       </select>
+
+      <button id="resetDemoBtn" class="btn" style="white-space:nowrap;">
+        Reset Demo Data
+      </button>
     </div>
   `;
 }
+
   
   if (!el) return;
 
@@ -709,6 +716,12 @@ if (libraryUI.sort === "title") {
       const sample = SAMPLES[key];
       if (!sample) return;
 
+        // Keep routing + saving aligned with the active sample
+  if (docs?.some(d => d.id === key)) {
+    currentDocId = key;
+    saveLastDocId(key);
+  }
+
       state.activeSampleKey = key;
       const tokens = tokenizeWithParagraphs(sample.text);
       state.words = tokens;
@@ -739,6 +752,46 @@ function buildDefaultDocsFromSamples() {
   }));
 }
 
+  function resetDemoData() {
+  const ok = confirm("Reset demo data? This will delete all imported/pasted docs and progress.");
+  if (!ok) return;
+
+  try {
+    // 1) Clear only Skimr keys (safer than localStorage.clear())
+    localStorage.removeItem(STORAGE_KEY);     // "skimr_docs_v1"
+    localStorage.removeItem(LAST_DOC_KEY);    // "skimr_last_doc_id_v1"
+  } catch (e) {
+    console.warn("Could not access localStorage:", e);
+  }
+
+  // 2) Rebuild docs from samples
+  docs = buildDefaultDocsFromSamples();
+
+  // Ensure totalWords are accurate (for progress %)
+  docs.forEach(d => {
+    if (d.sampleKey && SAMPLES[d.sampleKey]) {
+      d.totalWords = tokenizeWithParagraphs(SAMPLES[d.sampleKey].text).length;
+    }
+  });
+
+  // 3) Reset current doc + reader state
+  currentDocId = "psychology";
+  state.loadedDocId = null;   // force router to reload
+  state.index = 0;
+  state.displayIndex = 0;
+  state.isPlaying = false;
+
+  // 4) Persist and refresh UI
+  saveLastDocId(currentDocId);
+  saveDocs();
+  renderLibrary();
+
+  // 5) Route to landing or app (choose one)
+  window.location.hash = "#/";    // landing
+  // window.location.hash = "#/app"; // <- use this instead if you prefer landing -> app immediately
+
+  showToast("Demo reset ✅");
+}
 
     function loadFromTextarea(){
       const raw = textArea.value || "";
@@ -842,9 +895,29 @@ document.addEventListener("change", (e) => {
     restartBtn.addEventListener("click", () => { togglePlay(false); restart(); });
 
     sampleSelect.addEventListener("change", (e) => {
-      togglePlay(false);
-      loadSample(e.target.value);
-    });
+  // 1) Stop playback
+  togglePlay(false);
+
+  // 2) Save progress on the doc you're leaving
+  checkpointProgress(true);
+
+  // 3) Switch "current document" to match the selected sample
+  const key = e.target.value;         // "psychology" | "tech" | "classic"
+  currentDocId = key;                 // IMPORTANT: sample ids match these keys
+  state.loadedDocId = null;           // force reload logic to treat it as new
+  saveLastDocId(key);
+
+  // 4) Load the sample text + restore any saved position
+  const doc = docs.find(d => d.id === key);
+  loadSample(key);
+
+  // restore saved position if we have it
+  state.index = doc?.position || 0;
+
+  updateUI();
+  flashWord(Math.min(state.index, state.words.length - 1), true);
+});
+
 
     useTextBtn.addEventListener("click", loadFromTextarea);
     resetSampleBtn.addEventListener("click", () => {
@@ -894,6 +967,13 @@ document.addEventListener("change", (e) => {
 
 document.addEventListener("click", (e) => {
   
+// Reset demo button
+if (e.target?.id === "resetDemoBtn") {
+  resetDemoData();
+  return;
+}
+
+
   // 1) DELETE (handle first so it doesn't fall through)
   const deleteId = e.target.closest("[data-delete]")?.getAttribute("data-delete");
   if (deleteId) {
@@ -1096,7 +1176,7 @@ const text = extractTextFromHtml(html);
       location.hash = "#/app";
     } catch (err) {
       console.error(err);
-      showToast("Import failed (URL fetch may not be set up yet). Try Paste Text for now.");
+      showToast(`Import failed: ${err?.message || "unknown error"}`);
     } finally {
       importUrlBtn.disabled = false;
     }
