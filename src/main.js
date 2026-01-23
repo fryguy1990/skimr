@@ -895,33 +895,54 @@ document.addEventListener("change", (e) => {
     restartBtn.addEventListener("click", () => { togglePlay(false); restart(); });
 
   
-  sampleSelect.addEventListener("change", (e) => {
-  // 1) Save progress for whatever you were reading BEFORE switching
+sampleSelect.addEventListener("change", (e) => {
+  // 0) Stop playback
   togglePlay(false);
+
+  // 1) Save progress for the doc you're leaving
   checkpointProgress(true);
 
-  // 2) Switch the "active document" id so saves go to the right doc
-  const nextId = e.target.value; // "psychology" | "tech" | "classic"
-  currentDocId = nextId;
-  saveLastDocId(nextId);
+  // 2) Switch the "current document" to the sample you chose
+  const key = e.target.value; // "psychology" | "tech" | "classic"
+  currentDocId = key;
 
-  // 3) Force router/app to treat this as a new doc load
-  state.loadedDocId = null;
+  if (!docs.find(d => d.id === key)) {
+  docs.unshift({
+    id: key,
+    title: SAMPLES[key]?.title || key,
+    sampleKey: key,
+    sourceType: "sample",
+    sourceLabel: "SAMPLE",
+    position: 0,
+    totalWords: tokenizeWithParagraphs(SAMPLES[key]?.text || "").length,
+    updatedAt: Date.now(),
+  });
+  saveDocs();
+}
 
-  // 4) Load the sample text into the reader
-  loadSample(nextId);
+  state.loadedDocId = null;        // forces router/app to treat this as new doc
+  saveLastDocId(currentDocId);
 
-  // 5) Restore saved position (so switching doesn't reset progress)
-  const doc = docs.find(d => d.id === nextId);
-  const pos = doc?.position || 0;
+  // 3) Load the sample text into the reader
+  loadSample(key);
 
-  state.index = pos;
-  const maxIndex = Math.max(0, (state.words?.length || 1) - 1);
-  state.index = Math.min(Math.max(0, state.index), maxIndex);
+  // 4) Restore saved position for that sample (if any)
+  const doc = docs.find(d => d.id === currentDocId);
+  if (doc) {
+    state.index = doc.position || 0;
 
-  updateUI();
-  flashWord(Math.min(state.index, state.words.length - 1), true);
+    // clamp for safety
+    const maxIndex = Math.max(0, (state.words?.length || 1) - 1);
+    state.index = Math.min(Math.max(0, state.index || 0), maxIndex);
+
+    flashWord(state.index, true);
+    updateUI();
+  }
+
+  // 5) Mark as loaded
+  state.loadedDocId = currentDocId;
 });
+
 
 
     useTextBtn.addEventListener("click", loadFromTextarea);
