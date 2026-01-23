@@ -449,8 +449,8 @@ function startAutosave() {
 }
 
 function persistProgressNow() {
-  saveProgressToDoc();
   saveLastDocId(currentDocId);
+  checkpointProgress(true) ;
 }
 
 // Save when user leaves the tab / refreshes
@@ -894,25 +894,30 @@ document.addEventListener("change", (e) => {
     fwdBtn.addEventListener("click", () => { togglePlay(false); skip(10); showToast("Forward 10"); });
     restartBtn.addEventListener("click", () => { togglePlay(false); restart(); });
 
-    sampleSelect.addEventListener("change", (e) => {
-  // 1) Stop playback
+  
+  sampleSelect.addEventListener("change", (e) => {
+  // 1) Save progress for whatever you were reading BEFORE switching
   togglePlay(false);
-
-  // 2) Save progress on the doc you're leaving
   checkpointProgress(true);
 
-  // 3) Switch "current document" to match the selected sample
-  const key = e.target.value;         // "psychology" | "tech" | "classic"
-  currentDocId = key;                 // IMPORTANT: sample ids match these keys
-  state.loadedDocId = null;           // force reload logic to treat it as new
-  saveLastDocId(key);
+  // 2) Switch the "active document" id so saves go to the right doc
+  const nextId = e.target.value; // "psychology" | "tech" | "classic"
+  currentDocId = nextId;
+  saveLastDocId(nextId);
 
-  // 4) Load the sample text + restore any saved position
-  const doc = docs.find(d => d.id === key);
-  loadSample(key);
+  // 3) Force router/app to treat this as a new doc load
+  state.loadedDocId = null;
 
-  // restore saved position if we have it
-  state.index = doc?.position || 0;
+  // 4) Load the sample text into the reader
+  loadSample(nextId);
+
+  // 5) Restore saved position (so switching doesn't reset progress)
+  const doc = docs.find(d => d.id === nextId);
+  const pos = doc?.position || 0;
+
+  state.index = pos;
+  const maxIndex = Math.max(0, (state.words?.length || 1) - 1);
+  state.index = Math.min(Math.max(0, state.index), maxIndex);
 
   updateUI();
   flashWord(Math.min(state.index, state.words.length - 1), true);
@@ -1455,6 +1460,11 @@ function setupNavButtons() {
       window.location.hash = "#/app";
     });
   }
+}
+
+const resetDemoBtn = document.getElementById("resetDemoBtn");
+if (resetDemoBtn) {
+  resetDemoBtn.addEventListener("click", () => resetDemoData());
 }
 
   setupRouting();
